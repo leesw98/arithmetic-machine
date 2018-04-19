@@ -64,32 +64,33 @@ VM* newVM(char* code /* pointer to bytecode */ ) {
 }
 
 void delVM(VM* vm){
-        free(vm->stack);
-        free(vm);
+    free(vm->stack);
+    free(vm);
 }
 
 int run(VM* vm){
-    for (;;) {
+    while (1) {
         unsigned char opcode = NCODE(vm);        // store next bytecode in `opcode'
         double a, b, v;                          // use these to store intermediate values when implementing opcodes below
         switch (opcode) {   // decode
         case HALT: return EXIT_SUCCESS;  // exit successfully
         case NOP: break;    // pass
         case DCONST_M1:     // push -1.0 onto stack
-            // TODO: implement this.
+            PUSH(vm, -1.0);
             break;
         case DCONST_0:      // push 0.0 onto stack
-            // TODO: implement this.
+            PUSH(vm, 0.0);
             break;
         case DCONST_1:      // push 1.0 onto stack
-            // TODO: implement this.
+            PUSH(vm, 1.0);
             break;
         case DCONST_2:      // push 2.0 onto stack
-            // TODO: implement this.
+            PUSH(vm, 2.0);
             break;
         case DCONST:        // reads next 8 bytes of opcode as a double, and stores it on the stack.
-            // TODO: implement this.
-            // HINT: use memcpy to read next 8 bytes of code as a double. make sure you consider endianness.
+            memcpy(&v, vm->code + vm->pc, 8);
+            vm->pc += 8;
+            PUSH(vm, v);
             break;
         case ADD:           // add two doubles from top of stack and push result back onto stack
             b = POP(vm);
@@ -97,34 +98,38 @@ int run(VM* vm){
             PUSH(vm, a + b);
             break;
         case MUL:           // multiply two doubles from top of stack and push result back onto stack
-            // TODO: implement this.
+            b = POP(vm);
+            a = POP(vm);
+            PUSH(vm, a * b);
             break;
         case SUB:           // subtract two doubles from top of stack and push result back onto stack
-            // TODO: implement this.
+            b = POP(vm);
+            a = POP(vm);
+            PUSH(vm, a - b);
             break;
         case DIV:          // divide two doubles from top of stack and push result back onto stack
-            //TODO: implement this.
-            // HINT: make sure to deal with the division by zero case.
+            b = POP(vm);
+            a = POP(vm);
+            if (b == 0.0) return EXIT_FAILURE;
+            PUSH(vm, a / b);
             break;
         case NEG:                         // negates top of stack
-            //TODO: implement this.
+            PUSH(vm, -POP(vm));
             break;
         case LD1:          // put value from r1 in top of stack
-            // TODO: implement this.
+            PUSH(vm, vm->r1);
             break;
         case ST1:                         // store top of stack in r1
-            // TODO: implement this.
+            vm->r1 = POP(vm);
             break;
-        case LD2:           // put value from r1 in top of stack
-            // TODO: implement this.
-            // HINT: should be similar to LD1.
+        case LD2:           // put value from r2 in top of stack
+            PUSH(vm, vm->r2);
             break;
         case ST2:                         // store top of stack in r2
-            // TODO: implement this.
-            // HINT: should be similar to ST1.
+            vm->r2 = POP(vm);        
             break;
         case PRINT:                       // print top of stack, (and discard value afterwards.)
-            // TODO: implement this.
+            printf("%f\n", POP(vm));
             break;
         default:
             printf("InvalidOpcodeError: %x\n", opcode);  // terminate program at unknown opcode and show error.
@@ -140,12 +145,10 @@ int main(void) {
 	from an array.
 	*/
 	// simple example: push 2 onto stack, push 1 onto stack, subtract them, print the result, exit (should print 1.0)
-	char bytecode[] = { DCONST_2,
-		DCONST_1,
-		SUB,
-		PRINT,
-		HALT };
-	VM* vm = newVM(bytecode /* program to execute */ );
+	char bytecode[] = {
+        DCONST, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F, PRINT, HALT
+    };
+	VM* vm = newVM(bytecode);
 	int exit_status = run(vm);
 	delVM(vm);
 	return exit_status;
